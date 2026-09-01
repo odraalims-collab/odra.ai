@@ -1,301 +1,497 @@
-<script>
-const SpeechRecognition =
-  window.SpeechRecognition ||
-  window.webkitSpeechRecognition;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Odra AI</title>
 
-const statusText = document.getElementById("status");
-const commandText = document.getElementById("command");
-const orb = document.getElementById("orb");
-
-let recognition;
-let assistantRunning = false;
-
-if (!SpeechRecognition) {
-  statusText.innerText =
-    "Voice recognition is not supported. Please use Chrome or Edge.";
-} else {
-
-  recognition = new SpeechRecognition();
-
-  recognition.continuous = true;
-  recognition.interimResults = false;
-  recognition.lang = "en-US";
-
-  function startVoice() {
-    if (assistantRunning) return;
-
-    assistantRunning = true;
-
-    statusText.innerText =
-      'Listening... Say "Hey"';
-
-    if (orb) {
-      orb.classList.add("listening");
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    try {
-      recognition.start();
-    } catch (e) {
-      console.log("Recognition already started.");
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #080808, #202020);
+      font-family: Arial, sans-serif;
+      color: white;
     }
-  }
 
+    .assistant {
+      width: 90%;
+      max-width: 500px;
+      padding: 45px 30px;
+      text-align: center;
+      border-radius: 25px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
 
-  // Try to start automatically
-  window.addEventListener("load", () => {
-    setTimeout(() => {
-      try {
-        startVoice();
-      } catch (e) {
-        statusText.innerText =
-          "Click anywhere once to enable the microphone.";
+    .orb {
+      width: 140px;
+      height: 140px;
+      margin: auto;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00c6ff, #7b2cff);
+      box-shadow: 0 0 50px rgba(70,100,255,0.8);
+      animation: pulse 2s infinite;
+    }
+
+    .orb.listening {
+      animation: listening 0.8s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
       }
-    }, 500);
-  });
+
+      50% {
+        transform: scale(1.06);
+      }
+    }
+
+    @keyframes listening {
+      from {
+        transform: scale(1);
+        box-shadow: 0 0 35px #00c6ff;
+      }
+
+      to {
+        transform: scale(1.15);
+        box-shadow: 0 0 90px #7b2cff;
+      }
+    }
+
+    h1 {
+      margin-top: 25px;
+      font-size: 34px;
+    }
+
+    #status {
+      margin-top: 15px;
+      color: #aaa;
+      font-size: 17px;
+    }
+
+    #command {
+      margin-top: 25px;
+      min-height: 30px;
+      font-size: 18px;
+    }
+
+    .info {
+      margin-top: 25px;
+      color: #777;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="assistant">
+
+    <div class="orb" id="orb"></div>
+
+    <h1>Odra AI</h1>
+
+    <p id="status">
+      Starting voice assistant...
+    </p>
+
+    <p id="command"></p>
+
+    <p class="info">
+      Say: "Hey" followed by your command
+    </p>
+
+  </div>
 
 
-  // Browser fallback:
-  // one click anywhere enables microphone
-  document.addEventListener(
-    "click",
-    () => {
-      startVoice();
-    },
-    { once: true }
-  );
+  <script>
 
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
 
-  recognition.onresult = function (event) {
+    const statusText =
+      document.getElementById("status");
 
-    const result =
-      event.results[event.results.length - 1];
+    const commandText =
+      document.getElementById("command");
 
-    const text =
-      result[0].transcript
-        .toLowerCase()
-        .trim();
+    const orb =
+      document.getElementById("orb");
 
-    console.log("Heard:", text);
+    let recognition;
+    let assistantRunning = false;
 
-    commandText.innerText =
-      "You said: " + text;
-
-
-    // SAY ONLY "HEY"
-    if (text === "hey") {
+    // Check browser support
+    if (!SpeechRecognition) {
 
       statusText.innerText =
-        "What do you want?";
+        "Voice recognition is not supported. Please use Google Chrome.";
 
-      speak("Uhm, what do you want?");
+    } else {
 
-      return;
-    }
+      recognition = new SpeechRecognition();
 
-
-    // COMMAND MUST INCLUDE HEY
-    if (text.startsWith("hey")) {
-
-      const command =
-        text
-          .replace(/^hey/, "")
-          .trim();
-
-      handleCommand(command);
-
-      return;
-    }
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
 
 
-    // Allow command after saying Hey separately
-    handleCommand(text);
-  };
+      // ==========================
+      // START VOICE
+      // ==========================
 
+      function startVoice() {
 
-  function handleCommand(command) {
+        if (assistantRunning) return;
 
-    command = command.toLowerCase();
-
-
-    // YOUTUBE
-    if (
-      command.includes("youtube") ||
-      command.includes("go youtube") ||
-      command.includes("go to youtube") ||
-      command.includes("open youtube")
-    ) {
-
-      statusText.innerText =
-        "Opening YouTube...";
-
-      speak("Opening YouTube");
-
-      window.location.href =
-        "https://www.youtube.com/";
-
-      return;
-    }
-
-
-    // DISCORD
-    if (
-      command.includes("discord") ||
-      command.includes("go discord") ||
-      command.includes("go to discord") ||
-      command.includes("open discord")
-    ) {
-
-      statusText.innerText =
-        "Opening Discord...";
-
-      speak("Opening Discord");
-
-      window.location.href =
-        "https://discord.com/app";
-
-      return;
-    }
-
-
-    // GOOGLE
-    if (
-      command.includes("google") ||
-      command.includes("go google") ||
-      command.includes("go to google") ||
-      command.includes("open google")
-    ) {
-
-      statusText.innerText =
-        "Opening Google...";
-
-      speak("Opening Google");
-
-      window.location.href =
-        "https://www.google.com/";
-
-      return;
-    }
-
-
-    // FACEBOOK
-    if (command.includes("facebook")) {
-
-      statusText.innerText =
-        "Opening Facebook...";
-
-      speak("Opening Facebook");
-
-      window.location.href =
-        "https://www.facebook.com/";
-
-      return;
-    }
-
-
-    // INSTAGRAM
-    if (command.includes("instagram")) {
-
-      statusText.innerText =
-        "Opening Instagram...";
-
-      speak("Opening Instagram");
-
-      window.location.href =
-        "https://www.instagram.com/";
-
-      return;
-    }
-
-
-    // TIKTOK
-    if (
-      command.includes("tiktok") ||
-      command.includes("tik tok")
-    ) {
-
-      statusText.innerText =
-        "Opening TikTok...";
-
-      speak("Opening TikTok");
-
-      window.location.href =
-        "https://www.tiktok.com/";
-
-      return;
-    }
-
-
-    // SEARCH
-    if (command.startsWith("search ")) {
-
-      const searchQuery =
-        command.replace("search ", "").trim();
-
-      if (searchQuery) {
+        assistantRunning = true;
 
         statusText.innerText =
-          "Searching " + searchQuery;
+          'Listening... Say "Hey"';
 
-        speak(
-          "Searching for " + searchQuery
-        );
-
-        window.location.href =
-          "https://www.google.com/search?q=" +
-          encodeURIComponent(searchQuery);
-      }
-
-      return;
-    }
-  }
-
-
-  function speak(message) {
-
-    window.speechSynthesis.cancel();
-
-    const speech =
-      new SpeechSynthesisUtterance(message);
-
-    speech.lang = "en-US";
-    speech.rate = 1;
-
-    window.speechSynthesis.speak(speech);
-  }
-
-
-  recognition.onerror = function (event) {
-
-    console.log("Speech error:", event.error);
-
-    if (event.error === "not-allowed") {
-
-      assistantRunning = false;
-
-      statusText.innerText =
-        "Microphone blocked. Allow microphone permission, then click anywhere once.";
-
-      if (orb) {
-        orb.classList.remove("listening");
-      }
-    }
-  };
-
-
-  recognition.onend = function () {
-
-    if (assistantRunning) {
-
-      setTimeout(() => {
+        orb.classList.add("listening");
 
         try {
           recognition.start();
-        } catch (e) {
-          console.log("Restarting voice...");
+        } catch (error) {
+          console.log(error);
+        }
+      }
+
+
+      // Try automatically
+      window.addEventListener("load", function() {
+
+        setTimeout(function() {
+
+          try {
+
+            startVoice();
+
+          } catch (error) {
+
+            statusText.innerText =
+              "Click anywhere once to enable microphone.";
+
+          }
+
+        }, 1000);
+
+      });
+
+
+      // If Chrome requires user interaction
+      document.addEventListener("click", function() {
+
+        startVoice();
+
+      }, { once: true });
+
+
+      // ==========================
+      // VOICE RESULT
+      // ==========================
+
+      recognition.onresult = function(event) {
+
+        const result =
+          event.results[
+            event.results.length - 1
+          ];
+
+        const text =
+          result[0].transcript
+            .toLowerCase()
+            .trim();
+
+        console.log("Heard:", text);
+
+        commandText.innerText =
+          "You said: " + text;
+
+
+        // ONLY "HEY"
+        if (text === "hey") {
+
+          statusText.innerText =
+            "What do you want?";
+
+          speak("Uhm, what do you want?");
+
+          return;
         }
 
-      }, 400);
+
+        // HEY + COMMAND
+        if (text.startsWith("hey")) {
+
+          const command =
+            text
+              .substring(3)
+              .trim();
+
+          handleCommand(command);
+
+        }
+
+      };
+
+
+      // ==========================
+      // COMMANDS
+      // ==========================
+
+      function handleCommand(command) {
+
+        console.log("Command:", command);
+
+
+        // YOUTUBE
+        if (command.includes("youtube")) {
+
+          statusText.innerText =
+            "Opening YouTube...";
+
+          speak("Opening YouTube");
+
+          setTimeout(function() {
+
+            window.location.href =
+              "https://www.youtube.com/";
+
+          }, 500);
+
+          return;
+        }
+
+
+        // DISCORD
+        if (command.includes("discord")) {
+
+          statusText.innerText =
+            "Opening Discord...";
+
+          speak("Opening Discord");
+
+          setTimeout(function() {
+
+            window.location.href =
+              "https://discord.com/app";
+
+          }, 500);
+
+          return;
+        }
+
+
+        // GOOGLE
+        if (command.includes("google")) {
+
+          statusText.innerText =
+            "Opening Google...";
+
+          speak("Opening Google");
+
+          setTimeout(function() {
+
+            window.location.href =
+              "https://www.google.com/";
+
+          }, 500);
+
+          return;
+        }
+
+
+        // FACEBOOK
+        if (command.includes("facebook")) {
+
+          statusText.innerText =
+            "Opening Facebook...";
+
+          speak("Opening Facebook");
+
+          setTimeout(function() {
+
+            window.location.href =
+              "https://www.facebook.com/";
+
+          }, 500);
+
+          return;
+        }
+
+
+        // INSTAGRAM
+        if (command.includes("instagram")) {
+
+          statusText.innerText =
+            "Opening Instagram...";
+
+          speak("Opening Instagram");
+
+          setTimeout(function() {
+
+            window.location.href =
+              "https://www.instagram.com/";
+
+          }, 500);
+
+          return;
+        }
+
+
+        // TIKTOK
+        if (
+          command.includes("tiktok") ||
+          command.includes("tik tok")
+        ) {
+
+          statusText.innerText =
+            "Opening TikTok...";
+
+          speak("Opening TikTok");
+
+          setTimeout(function() {
+
+            window.location.href =
+              "https://www.tiktok.com/";
+
+          }, 500);
+
+          return;
+        }
+
+
+        // SEARCH
+        if (command.startsWith("search ")) {
+
+          const search =
+            command
+              .replace("search ", "")
+              .trim();
+
+          if (search) {
+
+            statusText.innerText =
+              "Searching " + search;
+
+            speak(
+              "Searching for " + search
+            );
+
+            setTimeout(function() {
+
+              window.location.href =
+                "https://www.google.com/search?q=" +
+                encodeURIComponent(search);
+
+            }, 500);
+
+          }
+
+          return;
+        }
+
+
+        // UNKNOWN
+        statusText.innerText =
+          "I don't know that command.";
+
+        speak(
+          "I don't know that command yet."
+        );
+
+      }
+
+
+      // ==========================
+      // SPEAK
+      // ==========================
+
+      function speak(message) {
+
+        window.speechSynthesis.cancel();
+
+        const speech =
+          new SpeechSynthesisUtterance(message);
+
+        speech.lang = "en-US";
+        speech.rate = 1;
+
+        window.speechSynthesis.speak(speech);
+
+      }
+
+
+      // ==========================
+      // ERROR
+      // ==========================
+
+      recognition.onerror = function(event) {
+
+        console.log(
+          "Speech error:",
+          event.error
+        );
+
+        if (event.error === "not-allowed") {
+
+          assistantRunning = false;
+
+          orb.classList.remove("listening");
+
+          statusText.innerText =
+            "Microphone blocked. Allow microphone permission.";
+
+        }
+
+      };
+
+
+      // ==========================
+      // RESTART
+      // ==========================
+
+      recognition.onend = function() {
+
+        if (assistantRunning) {
+
+          setTimeout(function() {
+
+            try {
+
+              recognition.start();
+
+            } catch (error) {
+
+              console.log(
+                "Restarting voice..."
+              );
+
+            }
+
+          }, 500);
+
+        }
+
+      };
+
     }
-  };
-}
-</script>
+
+  </script>
+
+</body>
+</html>
