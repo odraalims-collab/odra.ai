@@ -1,0 +1,301 @@
+<script>
+const SpeechRecognition =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
+
+const statusText = document.getElementById("status");
+const commandText = document.getElementById("command");
+const orb = document.getElementById("orb");
+
+let recognition;
+let assistantRunning = false;
+
+if (!SpeechRecognition) {
+  statusText.innerText =
+    "Voice recognition is not supported. Please use Chrome or Edge.";
+} else {
+
+  recognition = new SpeechRecognition();
+
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.lang = "en-US";
+
+  function startVoice() {
+    if (assistantRunning) return;
+
+    assistantRunning = true;
+
+    statusText.innerText =
+      'Listening... Say "Hey"';
+
+    if (orb) {
+      orb.classList.add("listening");
+    }
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.log("Recognition already started.");
+    }
+  }
+
+
+  // Try to start automatically
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      try {
+        startVoice();
+      } catch (e) {
+        statusText.innerText =
+          "Click anywhere once to enable the microphone.";
+      }
+    }, 500);
+  });
+
+
+  // Browser fallback:
+  // one click anywhere enables microphone
+  document.addEventListener(
+    "click",
+    () => {
+      startVoice();
+    },
+    { once: true }
+  );
+
+
+  recognition.onresult = function (event) {
+
+    const result =
+      event.results[event.results.length - 1];
+
+    const text =
+      result[0].transcript
+        .toLowerCase()
+        .trim();
+
+    console.log("Heard:", text);
+
+    commandText.innerText =
+      "You said: " + text;
+
+
+    // SAY ONLY "HEY"
+    if (text === "hey") {
+
+      statusText.innerText =
+        "What do you want?";
+
+      speak("Uhm, what do you want?");
+
+      return;
+    }
+
+
+    // COMMAND MUST INCLUDE HEY
+    if (text.startsWith("hey")) {
+
+      const command =
+        text
+          .replace(/^hey/, "")
+          .trim();
+
+      handleCommand(command);
+
+      return;
+    }
+
+
+    // Allow command after saying Hey separately
+    handleCommand(text);
+  };
+
+
+  function handleCommand(command) {
+
+    command = command.toLowerCase();
+
+
+    // YOUTUBE
+    if (
+      command.includes("youtube") ||
+      command.includes("go youtube") ||
+      command.includes("go to youtube") ||
+      command.includes("open youtube")
+    ) {
+
+      statusText.innerText =
+        "Opening YouTube...";
+
+      speak("Opening YouTube");
+
+      window.location.href =
+        "https://www.youtube.com/";
+
+      return;
+    }
+
+
+    // DISCORD
+    if (
+      command.includes("discord") ||
+      command.includes("go discord") ||
+      command.includes("go to discord") ||
+      command.includes("open discord")
+    ) {
+
+      statusText.innerText =
+        "Opening Discord...";
+
+      speak("Opening Discord");
+
+      window.location.href =
+        "https://discord.com/app";
+
+      return;
+    }
+
+
+    // GOOGLE
+    if (
+      command.includes("google") ||
+      command.includes("go google") ||
+      command.includes("go to google") ||
+      command.includes("open google")
+    ) {
+
+      statusText.innerText =
+        "Opening Google...";
+
+      speak("Opening Google");
+
+      window.location.href =
+        "https://www.google.com/";
+
+      return;
+    }
+
+
+    // FACEBOOK
+    if (command.includes("facebook")) {
+
+      statusText.innerText =
+        "Opening Facebook...";
+
+      speak("Opening Facebook");
+
+      window.location.href =
+        "https://www.facebook.com/";
+
+      return;
+    }
+
+
+    // INSTAGRAM
+    if (command.includes("instagram")) {
+
+      statusText.innerText =
+        "Opening Instagram...";
+
+      speak("Opening Instagram");
+
+      window.location.href =
+        "https://www.instagram.com/";
+
+      return;
+    }
+
+
+    // TIKTOK
+    if (
+      command.includes("tiktok") ||
+      command.includes("tik tok")
+    ) {
+
+      statusText.innerText =
+        "Opening TikTok...";
+
+      speak("Opening TikTok");
+
+      window.location.href =
+        "https://www.tiktok.com/";
+
+      return;
+    }
+
+
+    // SEARCH
+    if (command.startsWith("search ")) {
+
+      const searchQuery =
+        command.replace("search ", "").trim();
+
+      if (searchQuery) {
+
+        statusText.innerText =
+          "Searching " + searchQuery;
+
+        speak(
+          "Searching for " + searchQuery
+        );
+
+        window.location.href =
+          "https://www.google.com/search?q=" +
+          encodeURIComponent(searchQuery);
+      }
+
+      return;
+    }
+  }
+
+
+  function speak(message) {
+
+    window.speechSynthesis.cancel();
+
+    const speech =
+      new SpeechSynthesisUtterance(message);
+
+    speech.lang = "en-US";
+    speech.rate = 1;
+
+    window.speechSynthesis.speak(speech);
+  }
+
+
+  recognition.onerror = function (event) {
+
+    console.log("Speech error:", event.error);
+
+    if (event.error === "not-allowed") {
+
+      assistantRunning = false;
+
+      statusText.innerText =
+        "Microphone blocked. Allow microphone permission, then click anywhere once.";
+
+      if (orb) {
+        orb.classList.remove("listening");
+      }
+    }
+  };
+
+
+  recognition.onend = function () {
+
+    if (assistantRunning) {
+
+      setTimeout(() => {
+
+        try {
+          recognition.start();
+        } catch (e) {
+          console.log("Restarting voice...");
+        }
+
+      }, 400);
+    }
+  };
+}
+</script>
